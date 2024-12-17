@@ -2,6 +2,7 @@ import { db } from "@/db"
 import { router } from "../__internals/router"
 import { privateProcedure } from "../procedures"
 import { startOfMonth } from "date-fns"
+import { z } from "zod"
 
 // Fetch categories for the authenticated user
 export const categoryRouter = router({
@@ -75,6 +76,22 @@ export const categoryRouter = router({
     )
 
     // Return the categories in the response
-    return c.json({})
+    return c.superjson({ categories: categoriesWithCounts })
   }),
+
+  deleteCategory: privateProcedure
+    .input(
+      z.object({
+        name: z.string(),
+      })
+    )
+    .mutation(async ({ c, input, ctx }) => {
+      const { name } = input
+
+      await db.eventCategory.delete({
+        where: { name_userId: { name, userId: ctx.user.id } },
+      })
+
+      return c.json({ success: true })
+    }),
 })
