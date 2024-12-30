@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { client } from "../lib/client"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { format, formatDistance, formatDistanceToNow } from "date-fns"
@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/modal"
 
 export const DashboardPageContent = () => {
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const { data: categories, isPending: isEventCategoriesLoading } = useQuery({
     queryKey: ["user-event-categories"],
@@ -22,11 +23,18 @@ export const DashboardPageContent = () => {
     },
   })
 
-  const {} = useMutation({
-    mutationFn: async () => {
-      await client.category
-    },
-  })
+  const { mutate: deleteCategory, isPending: isDeletingCategory } = useMutation(
+    {
+      mutationFn: async (name: string) => {
+        await client.category.deleteCategory.$post({ name })
+      },
+    }
+  )
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["user-event-categories"] })
+    setDeletingCategory(null)
+  }
 
   if (isEventCategoriesLoading) {
     return (
@@ -140,7 +148,15 @@ export const DashboardPageContent = () => {
               Cancel
             </Button>
 
-            <Button>Delete</Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deletingCategory && deleteCategory(deletingCategory)
+              }
+              disabled={isDeletingCategory}
+            >
+              {isDeletingCategory ? "Deleting..." : "Delete"}
+            </Button>
           </div>
         </div>
       </Modal>
